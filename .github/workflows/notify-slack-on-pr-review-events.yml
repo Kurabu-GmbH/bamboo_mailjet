@@ -1,0 +1,12 @@
+name: Slack Review Notifications
+
+on:
+  pull_request:
+    types: [ review_requested ]
+  pull_request_review:
+    types: [ submitted ]
+
+jobs:
+  call-shared:
+    uses: Kurabu-GmbH/kurabu-github-workflows/.github/workflows/notify-slack-on-pr-review-events-backend.yml@main
+    secrets: inherit

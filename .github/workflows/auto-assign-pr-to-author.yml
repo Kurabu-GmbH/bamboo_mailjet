@@ -1,0 +1,10 @@
+name: Auto assign PR to author
+
+on:
+  pull_request:
+    types: [ opened ]
+
+jobs:
+  call-shared:
+    uses: Kurabu-GmbH/kurabu-github-workflows/.github/workflows/auto-assign-pr-to-author.yml@main
+    secrets: inherit

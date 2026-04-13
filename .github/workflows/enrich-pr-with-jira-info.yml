@@ -1,0 +1,14 @@
+name: Enrich PR with jira info
+
+on:
+  pull_request:
+    types: [ opened ]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  call-shared:
+    uses: Kurabu-GmbH/kurabu-github-workflows/.github/workflows/enrich-pr-with-jira-info.yml@main
+    secrets: inherit

@@ -1,0 +1,16 @@
+name: Notify Jira on PR review events
+
+on:
+  pull_request_review:
+    types: [ submitted ]
+  pull_request:
+    types: [ review_requested ]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  call-shared:
+    uses: Kurabu-GmbH/kurabu-github-workflows/.github/workflows/notify-jira-on-pr-review-events.yml@main
+    secrets: inherit
