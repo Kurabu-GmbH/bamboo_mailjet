@@ -64,15 +64,20 @@ defmodule Bamboo.MailjetAdapter do
     body = email |> to_mailjet_body |> Bamboo.json_library().encode!()
     url = [base_uri(), @send_message_path]
 
-    case :hackney.post(url, gen_headers(config), body, [:with_body]) do
-      {:ok, status, _headers, response} when status > 299 ->
-        {:error, ApiError.exception(%{params: body, response: response})}
+    try do
+      case :hackney.post(url, gen_headers(config), body, [:with_body]) do
+        {:ok, status, _headers, response} when status > 299 ->
+          {:error, ApiError.exception(%{params: body, response: response})}
 
-      {:ok, status, headers, response} ->
-        {:ok, %{status_code: status, headers: headers, body: response}}
+        {:ok, status, headers, response} ->
+          {:ok, %{status_code: status, headers: headers, body: response}}
 
-      {:error, reason} ->
-        {:error, ApiError.exception(%{message: inspect(reason)})}
+        {:error, reason} ->
+          {:error, ApiError.exception(%{message: inspect(reason)})}
+      end
+    catch
+      :exit, reason ->
+        {:error, ApiError.exception(%{message: "hackney exit: #{inspect(reason)}"})}
     end
   end
 
