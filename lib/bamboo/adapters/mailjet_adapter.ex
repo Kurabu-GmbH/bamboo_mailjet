@@ -65,7 +65,12 @@ defmodule Bamboo.MailjetAdapter do
     url = [base_uri(), @send_message_path]
 
     try do
-      case :hackney.post(url, gen_headers(config), body, [:with_body]) do
+      case :hackney.post(url, gen_headers(config), body, [
+             :with_body,
+             {:connect_timeout, 10_000},
+             {:recv_timeout, 15_000},
+             {:pool, true}
+           ]) do
         {:ok, status, _headers, response} when status > 299 ->
           {:error, ApiError.exception(%{params: body, response: response})}
 
@@ -76,8 +81,8 @@ defmodule Bamboo.MailjetAdapter do
           {:error, ApiError.exception(%{message: inspect(reason)})}
       end
     catch
-      :exit, {:normal, _} ->
-        {:ok, %{status_code: 200, headers: [], body: ""}}
+      :exit, {:normal, {:gen_statem, :call, _}} ->
+        {:error, ApiError.exception(%{message: "hackney connection closed before response"})}
 
       :exit, reason ->
         {:error, ApiError.exception(%{message: "hackney exit: #{inspect(reason)}"})}
