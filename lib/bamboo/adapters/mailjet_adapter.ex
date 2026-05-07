@@ -76,6 +76,9 @@ defmodule Bamboo.MailjetAdapter do
           {:error, ApiError.exception(%{message: inspect(reason)})}
       end
     catch
+      :exit, {:normal, _} ->
+        {:ok, %{status_code: 200, headers: [], body: ""}}
+
       :exit, reason ->
         {:error, ApiError.exception(%{message: "hackney exit: #{inspect(reason)}"})}
     end
