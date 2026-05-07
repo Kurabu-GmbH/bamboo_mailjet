@@ -76,7 +76,7 @@ defmodule Bamboo.MailjetAdapter do
           {:error, ApiError.exception(%{message: inspect(reason)})}
       end
     catch
-      :exit, {:normal, {GenServer, :call, _args}} ->
+      :exit, {:normal, _} ->
         {:ok, %{status_code: 200, headers: [], body: ""}}
 
       :exit, reason ->
