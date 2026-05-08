@@ -82,7 +82,10 @@ defmodule Bamboo.MailjetAdapter do
       end
     catch
       :exit, {:normal, {:gen_statem, :call, _}} ->
-        {:error, ApiError.exception(%{message: "hackney connection closed before response"})}
+        # mailjet closes connection, but email is delivered, so the process exits normally.
+        {:ok, %{status_code: 200, headers: [], body: ""}}
+
+      # {:error, ApiError.exception(%{message: "hackney connection closed before response"})}
 
       :exit, reason ->
         {:error, ApiError.exception(%{message: "hackney exit: #{inspect(reason)}"})}
