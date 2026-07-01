@@ -41,9 +41,11 @@ defmodule Bamboo.MailjetAdapter do
       %ApiError{message: message}
     end
 
-    def exception(%{params: params, response: response}) do
+    def exception(%{params: params, response: response, response_code: response_code}) do
       message = """
       There was a problem sending the email through the Mailjet API.
+
+      Here is the response code: #{response_code}
 
       Here is the response:
 
@@ -72,7 +74,7 @@ defmodule Bamboo.MailjetAdapter do
              {:pool, true}
            ]) do
         {:ok, status, _headers, response} when status > 299 ->
-          {:error, ApiError.exception(%{params: body, response: response})}
+          {:error, ApiError.exception(%{params: body, response: response, response_code: status})}
 
         {:ok, status, headers, response} ->
           {:ok, %{status_code: status, headers: headers, body: response}}
