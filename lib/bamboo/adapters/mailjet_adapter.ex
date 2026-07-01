@@ -47,6 +47,13 @@ defmodule Bamboo.MailjetAdapter do
 
       Here is the response code: #{response_code}
 
+      API errors:
+      400 - Invalid characters detected - A non UTF-8 character was detected
+      400 - "Headers" is not JSON object type - The Headers property should follow the format {"X-My-Header":"my own value","X-My-Header-2":"my own value 2"}
+      400 - Header [Property name] is not string type
+      400 - Missing "To" or "Recipients" property - Send API must be called with either "To" or "Recipient" properties
+      400 - Too many recipients in To / Too many recipients in Cc / Too many recipients in Bcc - To, Cc and Bcc can't exceed 50 Email addresses
+
       Here is the response:
 
       #{inspect(response, limit: :infinity)}
