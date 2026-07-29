@@ -32,10 +32,17 @@ defmodule Bamboo.MailjetAdapterTest do
       Plug.Cowboy.http(__MODULE__, [], port: port, ref: __MODULE__)
     end
 
-    defp get_free_port do
-      {:ok, socket} = :ranch_tcp.listen(port: 0)
-      {:ok, port} = :inet.port(socket)
-      :erlang.port_close(socket)
+    def get_free_port do
+      {:ok, socket} =
+        :gen_tcp.listen(0, [
+          :binary,
+          active: false,
+          reuseaddr: true
+        ])
+
+      {:ok, {_address, port}} = :inet.sockname(socket)
+      :ok = :gen_tcp.close(socket)
+
       port
     end
 
@@ -105,12 +112,13 @@ defmodule Bamboo.MailjetAdapterTest do
     email |> MailjetAdapter.deliver(@config)
 
     assert_receive {:fake_mailjet, %{params: params, req_headers: headers}}
-
+    IO.inspect(params)
     assert params["fromname"] == email.from |> elem(0)
     assert params["fromemail"] == email.from |> elem(1)
     assert params["subject"] == email.subject
     assert params["text-part"] == email.text_body
     assert params["html-part"] == email.html_body
+    #    assert headers["reply-to"] == "reply@foo.com"
 
     assert Enum.member?(
              headers,
