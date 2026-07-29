@@ -228,6 +228,68 @@ defmodule Bamboo.MailjetAdapterTest do
     assert error.message =~ "INVALID_EMAIL"
   end
 
+  test "deliver/2 sends attachment with content_id as inline attachment" do
+    email =
+      new_email(html_body: ~s(<img src="cid:qr-code.png">))
+      |> Email.put_attachment(%Bamboo.Attachment{
+        filename: "qr.png",
+        content_type: "image/png",
+        data: "QR CODE",
+        content_id: "qr-code.png"
+      })
+
+    email |> MailjetAdapter.deliver(@config)
+
+    assert_receive {:fake_mailjet, %{params: params}}
+
+    assert params["inline_attachments"] == [
+             %{
+               "content-type" => "image/png",
+               "filename" => "qr-code.png",
+               "content" => Base.encode64("QR CODE")
+             }
+           ]
+
+    refute Map.has_key?(params, "attachments")
+  end
+
+  test "deliver/2 separates regular and inline attachments" do
+    email =
+      new_email()
+      |> Email.put_attachment(%Bamboo.Attachment{
+        filename: "document.txt",
+        content_type: "text/plain",
+        data: "DOCUMENT",
+        content_id: nil
+      })
+      |> Email.put_attachment(%Bamboo.Attachment{
+        filename: "qr.png",
+        content_type: "image/png",
+        data: "QR CODE",
+        content_id: "qr-code.png"
+      })
+
+    email |> MailjetAdapter.deliver(@config)
+
+    assert_receive {:fake_mailjet, %{params: params}}
+
+    assert params["attachments"] == [
+             %{
+               "content-type" => "text/plain",
+               "filename" => "document.txt",
+               "content" => Base.encode64("DOCUMENT")
+             }
+           ]
+
+    assert params["inline_attachments"] == [
+             %{
+               "content-type" => "image/png",
+               "filename" => "qr-code.png",
+               "content" => Base.encode64("QR CODE")
+             }
+           ]
+  end
+
   test "deliver/2 omits attachments key if no attachments" do
     email = new_email()
     email |> MailjetAdapter.deliver(@config)

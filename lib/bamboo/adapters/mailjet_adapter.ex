@@ -231,18 +231,26 @@ defmodule Bamboo.MailjetAdapter do
   defp put_attachments(body, %Email{attachments: []}), do: body
 
   defp put_attachments(body, %Email{attachments: attachments}) do
-    transformed =
+    {attachments, inline_attachments} =
       attachments
       |> Enum.reverse()
-      |> Enum.map(fn attachment ->
-        %{
-          filename: attachment.filename,
+      |> Enum.reduce({[], []}, fn attachment, {regular, inline} ->
+        transformed = %{
+          filename: attachment.content_id || attachment.filename,
           "content-type": attachment.content_type,
           content: Base.encode64(attachment.data)
         }
+
+        if attachment.content_id not in [nil, ""] do
+          {regular, [transformed | inline]}
+        else
+          {[transformed | regular], inline}
+        end
       end)
 
-    Map.put(body, :attachments, transformed)
+    body
+    |> put_if_not_empty(:attachments, attachments)
+    |> put_if_not_empty(:inline_attachments, inline_attachments)
   end
 
   defp recipients(new_recipients) do
@@ -271,4 +279,7 @@ defmodule Bamboo.MailjetAdapter do
   defp base_uri do
     Application.get_env(:bamboo, :mailjet_base_uri) || @default_base_uri
   end
+
+  defp put_if_not_empty(map, _key, []), do: map
+  defp put_if_not_empty(map, key, value), do: Map.put(map, key, value)
 end
