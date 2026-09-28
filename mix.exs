@@ -24,7 +24,7 @@ defmodule BambooMailjet.Mixfile do
 
   def application do
     [
-      applications: [:logger, :bamboo]
+      extra_applications: [:logger]
     ]
   end
 
