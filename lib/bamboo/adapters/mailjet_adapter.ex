@@ -231,18 +231,49 @@ defmodule Bamboo.MailjetAdapter do
   defp put_attachments(body, %Email{attachments: []}), do: body
 
   defp put_attachments(body, %Email{attachments: attachments}) do
+    {inline, regular} = Enum.split_with(attachments, &inline_attachment?/1)
+
+    body
+    |> put_attachment_list(:attachments, regular)
+    |> put_attachment_list(:inline_attachments, inline)
+  end
+
+  # Mailjet resolves inline images using `cid:<Filename>`, so the attachment with content_id
+  # is sent as an inline attachment under that name, while the others remain normal.
+  defp inline_attachment?(%Bamboo.Attachment{content_id: content_id}) when is_binary(content_id),
+    do: true
+
+  defp inline_attachment?(_attachment), do: false
+
+  defp put_attachment_list(body, _key, []), do: body
+
+  defp put_attachment_list(body, key, attachments) do
     transformed =
       attachments
       |> Enum.reverse()
-      |> Enum.map(fn attachment ->
-        %{
-          filename: attachment.filename,
-          "content-type": attachment.content_type,
-          content: Base.encode64(attachment.data)
-        }
-      end)
+      |> Enum.map(&mailjet_attachment(&1, key))
 
-    Map.put(body, :attachments, transformed)
+    Map.put(body, key, transformed)
+  end
+
+  defp mailjet_attachment(
+         %Bamboo.Attachment{content_id: content_id} = attachment,
+         :inline_attachments
+       )
+       when is_binary(content_id) do
+    %{
+      filename: content_id,
+      "content-type": attachment.content_type,
+      content: Base.encode64(attachment.data)
+    }
+  end
+
+  defp mailjet_attachment(%Bamboo.Attachment{} = attachment, _key) do
+    %{
+      filename: attachment.filename,
+      "content-type": attachment.content_type,
+      content: Base.encode64(attachment.data)
+    }
   end
 
   defp recipients(new_recipients) do

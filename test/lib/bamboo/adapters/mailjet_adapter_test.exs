@@ -226,6 +226,87 @@ defmodule Bamboo.MailjetAdapterTest do
 
     assert_receive {:fake_mailjet, %{params: params}}
     refute Map.has_key?(params, "attachments")
+    refute Map.has_key?(params, "inline_attachments")
+  end
+
+  test "deliver/2 sends attachments without a content_id as regular attachments" do
+    email =
+      new_email()
+      |> Email.put_attachment(%Bamboo.Attachment{
+        filename: "pass.png",
+        content_type: "image/png",
+        data: <<1, 2, 3>>
+      })
+
+    email |> MailjetAdapter.deliver(@config)
+
+    assert_receive {:fake_mailjet, %{params: params}}
+
+    assert [%{"filename" => "pass.png", "content-type" => "image/png", "content" => content}] =
+             params["attachments"]
+
+    assert Base.decode64!(content) == <<1, 2, 3>>
+    refute Map.has_key?(params, "inline_attachments")
+  end
+
+  test "deliver/2 sends attachments with a content_id as inline attachments" do
+    email =
+      new_email()
+      |> Email.put_attachment(%Bamboo.Attachment{
+        filename: "pass.png",
+        content_type: "image/png",
+        content_id: "access-pass-qr",
+        data: <<4, 5, 6>>
+      })
+
+    email |> MailjetAdapter.deliver(@config)
+
+    assert_receive {:fake_mailjet, %{params: params}}
+
+    assert [%{"filename" => "access-pass-qr", "content-type" => "image/png", "content" => content}] =
+             params["inline_attachments"]
+
+    assert Base.decode64!(content) == <<4, 5, 6>>
+    refute Map.has_key?(params, "attachments")
+  end
+
+  test "deliver/2 sends both inline and regular attachments when present" do
+    email =
+      new_email()
+      |> Email.put_attachment(%Bamboo.Attachment{
+        filename: "regular_pass.png",
+        content_type: "image/png",
+        data: <<1, 2, 3>>
+      })
+      |> Email.put_attachment(%Bamboo.Attachment{
+        filename: "inline_qr.png",
+        content_type: "image/png",
+        content_id: "access-pass-qr",
+        data: <<4, 5, 6>>
+      })
+
+    email |> MailjetAdapter.deliver(@config)
+
+    assert_receive {:fake_mailjet, %{params: params}}
+
+    assert [
+             %{
+               "filename" => "regular_pass.png",
+               "content-type" => "image/png",
+               "content" => regular_content
+             }
+           ] = params["attachments"]
+
+    assert [
+             %{
+               "filename" => "access-pass-qr",
+               "content-type" => "image/png",
+               "content" => inline_content
+             }
+           ] = params["inline_attachments"]
+
+    assert Base.decode64!(regular_content) == <<1, 2, 3>>
+    assert Base.decode64!(inline_content) == <<4, 5, 6>>
   end
 
   defp new_email(attrs \\ []) do
