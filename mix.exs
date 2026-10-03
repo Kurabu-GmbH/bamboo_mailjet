@@ -33,7 +33,7 @@ defmodule BambooMailjet.Mixfile do
       {:bamboo, "~> 2.5.0"},
       {:cowboy, "~> 2.6.1", only: [:test, :dev]},
       {:plug_cowboy, "~> 2.0", only: [:test, :dev]},
-      {:credo, "~> 1.0.4", only: [:dev, :test]},
+      {:credo, "~> 1.7.0", only: [:dev, :test]},
       {:ex_doc, "~> 0.19", only: :dev},
       {:inch_ex, "~> 2.0.0", only: :dev}
     ]
