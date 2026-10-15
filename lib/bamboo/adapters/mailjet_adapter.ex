@@ -30,6 +30,7 @@ defmodule Bamboo.MailjetAdapter do
 
   @default_base_uri "https://api.mailjet.com/v3"
   @send_message_path "/send"
+  @address_specials ["(", ")", "<", ">", "[", "]", ":", ";", "@", "\\", ",", ".", "\""]
   @behaviour Bamboo.Adapter
 
   alias Bamboo.Email
@@ -297,7 +298,17 @@ defmodule Bamboo.MailjetAdapter do
 
   defp get_address_output(address) when is_binary(address), do: [address]
   defp get_address_output({name, email}) when name in [nil, '', ""], do: [email]
-  defp get_address_output({name, email}), do: [name <> " <" <> email <> ">"]
+  defp get_address_output({name, email}), do: [display_name(name) <> " <" <> email <> ">"]
+
+  # Mailjet reads To, Cc and Bcc as one comma-separated header, so a name holding an
+  # RFC 5322 special character such as "@" or "," must be sent as a quoted string.
+  defp display_name(name) do
+    name = String.replace(name, ["\r\n", "\r", "\n"], " ")
+
+    if String.contains?(name, @address_specials),
+      do: ~s(") <> String.replace(name, ["\\", "\""], &("\\" <> &1)) <> ~s("),
+      else: name
+  end
 
   defp base_uri do
     Application.get_env(:bamboo, :mailjet_base_uri) || @default_base_uri

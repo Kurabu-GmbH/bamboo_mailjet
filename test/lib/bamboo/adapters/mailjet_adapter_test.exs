@@ -143,6 +143,49 @@ defmodule Bamboo.MailjetAdapterTest do
     assert params["bcc"] == "foo1 <foo1@bar.com>,foo2@bar.com,foo3@bar.com"
   end
 
+  test "deliver/2 quotes display names that contain address special characters" do
+    email =
+      new_email(
+        to: [{"Annika @lafaa", "foo1@bar.com"}, {"Müller, Hans", "foo2@bar.com"}],
+        cc: [{"Dr. Hans Müller", "foo3@bar.com"}],
+        bcc: [{"Team (Berlin)", "foo4@bar.com"}]
+      )
+
+    email |> MailjetAdapter.deliver(@config)
+
+    assert_receive {:fake_mailjet, %{params: params}}
+    assert params["to"] == ~s("Annika @lafaa" <foo1@bar.com>,"Müller, Hans" <foo2@bar.com>)
+    assert params["cc"] == ~s("Dr. Hans Müller" <foo3@bar.com>)
+    assert params["bcc"] == ~s|"Team (Berlin)" <foo4@bar.com>|
+  end
+
+  test "deliver/2 escapes double quotes and backslashes in quoted display names" do
+    email = new_email(to: [{~s(Hans "Hansi" Müller), "foo1@bar.com"}, {~S(Back\slash), "foo2@bar.com"}])
+
+    email |> MailjetAdapter.deliver(@config)
+
+    assert_receive {:fake_mailjet, %{params: params}}
+    assert params["to"] == ~S("Hans \"Hansi\" Müller" <foo1@bar.com>,"Back\\slash" <foo2@bar.com>)
+  end
+
+  test "deliver/2 replaces line breaks in display names with a space" do
+    email = new_email(to: [{"Annika\r\nMeyer", "foo1@bar.com"}, {"Hans\nMüller, Jr", "foo2@bar.com"}])
+
+    email |> MailjetAdapter.deliver(@config)
+
+    assert_receive {:fake_mailjet, %{params: params}}
+    assert params["to"] == ~s(Annika Meyer <foo1@bar.com>,"Hans Müller, Jr" <foo2@bar.com>)
+  end
+
+  test "deliver/2 keeps display names with special characters unquoted in Mailjet recipients" do
+    email = new_email(bcc: [{"Annika @lafaa", "foo1@bar.com"}])
+
+    email |> MailjetAdapter.deliver(@config)
+
+    assert_receive {:fake_mailjet, %{params: params}}
+    assert params["recipients"] == [%{"email" => "foo1@bar.com", "name" => "Annika @lafaa"}]
+  end
+
   test "deliver/2 correctly formats Mailjet recipients" do
     email = new_email(bcc: [{"user1", "foo1@bar.com"}, {nil, "foo2@bar.com"}, "foo3@bar.com"])
 
